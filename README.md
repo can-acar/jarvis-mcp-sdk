@@ -1,4 +1,4 @@
-# Jarvis MCP SDK
+# Jarvis  MCP GO SDK
 
 🤖 **Jarvis MCP SDK** - Go dili için gelişmiş MCP (Model Context Protocol) server framework'ü. FastMCP'nin ötesinde özellikler sunan, yüksek performanslı ve type-safe bir SDK.
 
