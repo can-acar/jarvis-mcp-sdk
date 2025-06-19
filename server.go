@@ -25,6 +25,8 @@ type Server struct {
 	concurrencyEnabled bool
 	streamingManager *StreamingManager
 	webTransport *WebTransport
+	wsManager *WebSocketManager
+	sseManager *SSEManager
 }
 
 // NewServer creates a new MCP server
@@ -345,4 +347,14 @@ func (s *Server) RunWithTransport(reader io.Reader, writer io.Writer) error {
 func (s *Server) SetLogger(logger *log.Logger) *Server {
 	s.logger = logger
 	return s
+}
+
+// GetWebSocketManager returns the WebSocket manager
+func (s *Server) GetWebSocketManager() *WebSocketManager {
+	return s.wsManager
+}
+
+// GetSSEManager returns the SSE manager
+func (s *Server) GetSSEManager() *SSEManager {
+	return s.sseManager
 }
