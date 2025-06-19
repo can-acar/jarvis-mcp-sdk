@@ -32,7 +32,7 @@
 
 ```bash
 go mod init your-mcp-server
-go get github.com/jarvis-mcp/jarvis-mcp-sdk
+go get github.com/can-acar/jarvis-mcp-sdk
 ```
 
 ## Hızlı Başlangıç
@@ -46,7 +46,7 @@ import (
     "context"
     "encoding/json"
     "fmt"
-    jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
+    jarvis "github.com/can-acar/jarvis-mcp-sdk"
 )
 
 func main() {

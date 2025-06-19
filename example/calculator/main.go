@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
+	jarvis "github.com/can-acar/jarvis-mcp-sdk"
 )
 
 func main() {
