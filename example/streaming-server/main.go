@@ -12,12 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
+	mcp "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func main() {
 	// Create Jarvis MCP server with streaming capabilities
-	server := jarvis.NewServer("streaming-demo-server", "2.0.0")
+	server := mcp.NewServer("streaming-demo-server", "2.0.0")
 
 	// Register streaming tools
 	registerStreamingTools(server)
@@ -29,7 +29,7 @@ func main() {
 	registerResources(server)
 
 	// Enable concurrency for better performance
-	server.EnableConcurrency(jarvis.ConcurrencyConfig{
+	server.EnableConcurrency(mcp.ConcurrencyConfig{
 		MaxWorkers:     8,
 		QueueSize:      200,
 		RequestTimeout: 60 * time.Second,
@@ -37,7 +37,7 @@ func main() {
 	})
 
 	// Configure web transport
-	webConfig := jarvis.WebConfig{
+	webConfig := mcp.WebConfig{
 		Port:            8080,
 		Host:            "localhost",
 		AuthToken:       "streaming-demo-token-2024",
@@ -50,13 +50,13 @@ func main() {
 	server.EnableWebTransport(webConfig)
 
 	// Enable WebSocket for real-time streaming
-	wsConfig := jarvis.DefaultWebSocketConfig()
+	wsConfig := mcp.DefaultWebSocketConfig()
 	wsConfig.MaxMessageSize = 2 * 1024 * 1024 // 2MB messages
 	wsConfig.PingInterval = 20 * time.Second
 	server.EnableWebSocket(wsConfig)
 
 	// Enable Server-Sent Events for one-way streaming
-	sseConfig := jarvis.DefaultSSEConfig()
+	sseConfig := mcp.DefaultSSEConfig()
 	sseConfig.HeartbeatInterval = 15 * time.Second
 	sseConfig.MaxConnections = 200
 	server.EnableSSE(sseConfig)
@@ -73,9 +73,9 @@ func main() {
 	}
 }
 
-func registerStreamingTools(server *jarvis.Server) {
+func registerStreamingTools(server *mcp.Server) {
 	// File processing with progress
-	server.StreamingTool("process_files", "Process multiple files with real-time progress", func(ctx context.Context, params json.RawMessage) (<-chan jarvis.StreamingResult, error) {
+	server.StreamingTool("process_files", "Process multiple files with real-time progress", func(ctx context.Context, params json.RawMessage) (<-chan mcp.StreamingResult, error) {
 		var args struct {
 			FilePattern string `json:"filePattern"`
 			Operation   string `json:"operation"`
@@ -90,15 +90,15 @@ func registerStreamingTools(server *jarvis.Server) {
 			args.BatchSize = 10
 		}
 
-		resultChan := make(chan jarvis.StreamingResult, 100)
+		resultChan := make(chan mcp.StreamingResult, 100)
 
 		go func() {
 			defer close(resultChan)
 
 			// Simulate file discovery
-			resultChan <- jarvis.StreamingResult{
+			resultChan <- mcp.StreamingResult{
 				Data:     "Discovering files...",
-				Progress: jarvis.NewProgress(0, 100, "Scanning directories"),
+				Progress: mcp.NewProgress(0, 100, "Scanning directories"),
 			}
 
 			time.Sleep(500 * time.Millisecond)
@@ -108,22 +108,22 @@ func registerStreamingTools(server *jarvis.Server) {
 			for i := 0; i < totalFiles; i++ {
 				select {
 				case <-ctx.Done():
-					resultChan <- jarvis.NewErrorResult(ctx.Err())
+					resultChan <- mcp.NewErrorResult(ctx.Err())
 					return
 				default:
 				}
 
 				filename := fmt.Sprintf("file_%03d.txt", i+1)
-				
+
 				// Simulate processing time
 				processingTime := time.Duration(50+rand.Intn(200)) * time.Millisecond
 				time.Sleep(processingTime)
 
 				// Send progress update
-				progress := jarvis.NewProgress(int64(i+1), int64(totalFiles), fmt.Sprintf("Processing %s", filename))
+				progress := mcp.NewProgress(int64(i+1), int64(totalFiles), fmt.Sprintf("Processing %s", filename))
 				progress.EstimatedETA = time.Duration(totalFiles-i-1) * processingTime
 
-				resultChan <- jarvis.StreamingResult{
+				resultChan <- mcp.StreamingResult{
 					Data:     fmt.Sprintf("Processed %s (%s operation)", filename, args.Operation),
 					Progress: progress,
 					Metadata: map[string]interface{}{
@@ -136,7 +136,7 @@ func registerStreamingTools(server *jarvis.Server) {
 
 				// Batch updates for better performance
 				if (i+1)%args.BatchSize == 0 {
-					resultChan <- jarvis.StreamingResult{
+					resultChan <- mcp.StreamingResult{
 						Data:     fmt.Sprintf("Completed batch %d/%d", (i+1)/args.BatchSize, (totalFiles+args.BatchSize-1)/args.BatchSize),
 						Progress: progress,
 						Metadata: map[string]interface{}{
@@ -148,7 +148,7 @@ func registerStreamingTools(server *jarvis.Server) {
 			}
 
 			// Final result
-			resultChan <- jarvis.NewFinalResult(map[string]interface{}{
+			resultChan <- mcp.NewFinalResult(map[string]interface{}{
 				"total_files":    totalFiles,
 				"operation":      args.Operation,
 				"completed_at":   time.Now().Format(time.RFC3339),
@@ -160,10 +160,10 @@ func registerStreamingTools(server *jarvis.Server) {
 	})
 
 	// Data analysis with streaming results
-	server.StreamingTool("analyze_dataset", "Analyze large dataset with streaming progress", func(ctx context.Context, params json.RawMessage) (<-chan jarvis.StreamingResult, error) {
+	server.StreamingTool("analyze_dataset", "Analyze large dataset with streaming progress", func(ctx context.Context, params json.RawMessage) (<-chan mcp.StreamingResult, error) {
 		var args struct {
-			DatasetName string `json:"datasetName"`
-			ChunkSize   int    `json:"chunkSize"`
+			DatasetName string   `json:"datasetName"`
+			ChunkSize   int      `json:"chunkSize"`
 			Metrics     []string `json:"metrics"`
 		}
 
@@ -179,28 +179,28 @@ func registerStreamingTools(server *jarvis.Server) {
 			args.Metrics = []string{"mean", "std", "min", "max"}
 		}
 
-		resultChan := make(chan jarvis.StreamingResult, 100)
+		resultChan := make(chan mcp.StreamingResult, 100)
 
 		go func() {
 			defer close(resultChan)
 
 			// Simulate data loading
-			resultChan <- jarvis.StreamingResult{
+			resultChan <- mcp.StreamingResult{
 				Data:     fmt.Sprintf("Loading dataset: %s", args.DatasetName),
-				Progress: jarvis.NewProgress(0, 100, "Initializing"),
+				Progress: mcp.NewProgress(0, 100, "Initializing"),
 			}
 
 			time.Sleep(1 * time.Second)
 
 			totalRows := 50000 + rand.Intn(50000) // 50k-100k rows
 			chunks := (totalRows + args.ChunkSize - 1) / args.ChunkSize
-			
+
 			analysisResults := make(map[string]interface{})
 
 			for chunk := 0; chunk < chunks; chunk++ {
 				select {
 				case <-ctx.Done():
-					resultChan <- jarvis.NewErrorResult(ctx.Err())
+					resultChan <- mcp.NewErrorResult(ctx.Err())
 					return
 				default:
 				}
@@ -220,17 +220,17 @@ func registerStreamingTools(server *jarvis.Server) {
 					chunkMetrics[metric] = rand.Float64() * 100
 				}
 
-				progress := jarvis.NewProgress(int64(chunk+1), int64(chunks), fmt.Sprintf("Analyzing chunk %d/%d", chunk+1, chunks))
+				progress := mcp.NewProgress(int64(chunk+1), int64(chunks), fmt.Sprintf("Analyzing chunk %d/%d", chunk+1, chunks))
 
-				resultChan <- jarvis.StreamingResult{
+				resultChan <- mcp.StreamingResult{
 					Data:     fmt.Sprintf("Analyzed rows %d-%d", startRow, endRow),
 					Progress: progress,
 					Metadata: map[string]interface{}{
-						"chunk":        chunk + 1,
-						"rows_start":   startRow,
-						"rows_end":     endRow,
+						"chunk":         chunk + 1,
+						"rows_start":    startRow,
+						"rows_end":      endRow,
 						"chunk_metrics": chunkMetrics,
-						"memory_usage": fmt.Sprintf("%.1f MB", rand.Float64()*500+100),
+						"memory_usage":  fmt.Sprintf("%.1f MB", rand.Float64()*500+100),
 					},
 				}
 
@@ -244,7 +244,7 @@ func registerStreamingTools(server *jarvis.Server) {
 
 				// Send intermediate summary every 10 chunks
 				if (chunk+1)%10 == 0 {
-					resultChan <- jarvis.StreamingResult{
+					resultChan <- mcp.StreamingResult{
 						Data:     fmt.Sprintf("Intermediate results after %d chunks", chunk+1),
 						Progress: progress,
 						Metadata: map[string]interface{}{
@@ -266,11 +266,11 @@ func registerStreamingTools(server *jarvis.Server) {
 				finalMetrics[metric+"_avg"] = sum / float64(len(valuesSlice))
 			}
 
-			resultChan <- jarvis.NewFinalResult(map[string]interface{}{
-				"dataset_name":   args.DatasetName,
-				"total_rows":     totalRows,
-				"chunks_processed": chunks,
-				"final_metrics":  finalMetrics,
+			resultChan <- mcp.NewFinalResult(map[string]interface{}{
+				"dataset_name":          args.DatasetName,
+				"total_rows":            totalRows,
+				"chunks_processed":      chunks,
+				"final_metrics":         finalMetrics,
 				"analysis_completed_at": time.Now().Format(time.RFC3339),
 			})
 		}()
@@ -279,11 +279,11 @@ func registerStreamingTools(server *jarvis.Server) {
 	})
 
 	// Log streaming tool
-	server.StreamingTool("stream_logs", "Stream live log data", func(ctx context.Context, params json.RawMessage) (<-chan jarvis.StreamingResult, error) {
+	server.StreamingTool("stream_logs", "Stream live log data", func(ctx context.Context, params json.RawMessage) (<-chan mcp.StreamingResult, error) {
 		var args struct {
-			LogLevel  string `json:"logLevel"`
-			MaxLines  int    `json:"maxLines"`
-			Interval  int    `json:"interval"` // milliseconds
+			LogLevel string `json:"logLevel"`
+			MaxLines int    `json:"maxLines"`
+			Interval int    `json:"interval"` // milliseconds
 		}
 
 		if err := json.Unmarshal(params, &args); err != nil {
@@ -297,18 +297,18 @@ func registerStreamingTools(server *jarvis.Server) {
 			args.Interval = 1000 // 1 second
 		}
 
-		resultChan := make(chan jarvis.StreamingResult, 50)
+		resultChan := make(chan mcp.StreamingResult, 50)
 
 		go func() {
 			defer close(resultChan)
 
 			logLevels := []string{"DEBUG", "INFO", "WARN", "ERROR"}
 			services := []string{"api-server", "database", "cache", "worker", "scheduler"}
-			
+
 			for i := 0; i < args.MaxLines; i++ {
 				select {
 				case <-ctx.Done():
-					resultChan <- jarvis.NewErrorResult(ctx.Err())
+					resultChan <- mcp.NewErrorResult(ctx.Err())
 					return
 				default:
 				}
@@ -331,9 +331,9 @@ func registerStreamingTools(server *jarvis.Server) {
 					continue
 				}
 
-				resultChan <- jarvis.StreamingResult{
+				resultChan <- mcp.StreamingResult{
 					Data:     logEntry,
-					Progress: jarvis.NewProgress(int64(i+1), int64(args.MaxLines), fmt.Sprintf("Streaming log %d/%d", i+1, args.MaxLines)),
+					Progress: mcp.NewProgress(int64(i+1), int64(args.MaxLines), fmt.Sprintf("Streaming log %d/%d", i+1, args.MaxLines)),
 					Metadata: map[string]interface{}{
 						"log_level": level,
 						"service":   service,
@@ -344,7 +344,7 @@ func registerStreamingTools(server *jarvis.Server) {
 				time.Sleep(time.Duration(args.Interval) * time.Millisecond)
 			}
 
-			resultChan <- jarvis.NewFinalResult(map[string]interface{}{
+			resultChan <- mcp.NewFinalResult(map[string]interface{}{
 				"total_logs_streamed": args.MaxLines,
 				"log_level_filter":    args.LogLevel,
 				"stream_completed_at": time.Now().Format(time.RFC3339),
@@ -355,7 +355,7 @@ func registerStreamingTools(server *jarvis.Server) {
 	})
 }
 
-func registerRegularTools(server *jarvis.Server) {
+func registerRegularTools(server *mcp.Server) {
 	// System status tool
 	server.Tool("system_status", "Get current system status", func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		return map[string]interface{}{
@@ -363,10 +363,10 @@ func registerRegularTools(server *jarvis.Server) {
 			"status":    "operational",
 			"uptime":    "simulated",
 			"features": map[string]bool{
-				"streaming":    true,
-				"websockets":   true,
-				"sse":          true,
-				"concurrency":  true,
+				"streaming":     true,
+				"websockets":    true,
+				"sse":           true,
+				"concurrency":   true,
 				"web_dashboard": true,
 			},
 			"active_connections": map[string]interface{}{
@@ -380,7 +380,7 @@ func registerRegularTools(server *jarvis.Server) {
 	// Performance metrics tool
 	server.Tool("performance_metrics", "Get performance metrics", func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		metrics := server.GetConcurrencyMetrics()
-		
+
 		return map[string]interface{}{
 			"concurrency": map[string]interface{}{
 				"total_requests":     metrics.TotalRequests,
@@ -391,16 +391,16 @@ func registerRegularTools(server *jarvis.Server) {
 				"avg_response_time":  metrics.AverageResponseTime.String(),
 			},
 			"memory": map[string]interface{}{
-				"usage_mb":    rand.Float64()*200 + 50,
-				"gc_cycles":   rand.Intn(1000),
-				"goroutines":  rand.Intn(100) + 10,
+				"usage_mb":   rand.Float64()*200 + 50,
+				"gc_cycles":  rand.Intn(1000),
+				"goroutines": rand.Intn(100) + 10,
 			},
 			"timestamp": time.Now().Format(time.RFC3339),
 		}, nil
 	})
 }
 
-func registerResources(server *jarvis.Server) {
+func registerResources(server *mcp.Server) {
 	// Streaming sessions resource
 	server.Resource("streaming://sessions", "active_streaming_sessions", "Information about active streaming sessions", "application/json", func(ctx context.Context, uri string) (interface{}, error) {
 		// Mock streaming session data
@@ -429,10 +429,10 @@ func registerResources(server *jarvis.Server) {
 	// WebSocket connections resource
 	server.Resource("connections://websocket", "websocket_connections", "Active WebSocket connections", "application/json", func(ctx context.Context, uri string) (interface{}, error) {
 		connections := make([]map[string]interface{}, 0)
-		
+
 		if server.GetWebSocketManager() != nil {
 			wsConnections := server.GetWebSocketManager().GetConnections()
-			for id, conn := range wsConnections {
+			for id, _ := range wsConnections {
 				connections = append(connections, map[string]interface{}{
 					"id":           id,
 					"connected_at": "simulated",
@@ -480,7 +480,7 @@ func generateLogMessage(level string) string {
 
 	levelMessages := messages[level]
 	template := levelMessages[rand.Intn(len(levelMessages))]
-	
+
 	switch level {
 	case "DEBUG":
 		return fmt.Sprintf(template, rand.Intn(10000), rand.Intn(1000), rand.Intn(500), rand.Float64()*100)
@@ -491,7 +491,7 @@ func generateLogMessage(level string) string {
 	}
 }
 
-func printStartupInfo(webConfig jarvis.WebConfig) {
+func printStartupInfo(webConfig mcp.WebConfig) {
 	fmt.Println("🌊 Starting Jarvis MCP Streaming Server...")
 	fmt.Printf("📡 Web Dashboard: http://%s:%d/dashboard\n", webConfig.Host, webConfig.Port)
 	fmt.Printf("🔗 WebSocket Endpoint: ws://%s:%d/ws\n", webConfig.Host, webConfig.Port)
@@ -546,7 +546,7 @@ curl -H "Authorization: Bearer %s" \
 `, webConfig.AuthToken, webConfig.Host, webConfig.Port)
 }
 
-func setupGracefulShutdown(server *jarvis.Server) {
+func setupGracefulShutdown(server *mcp.Server) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
@@ -562,9 +562,4 @@ func setupGracefulShutdown(server *jarvis.Server) {
 		fmt.Println("✅ Server stopped gracefully")
 		os.Exit(0)
 	}()
-}
-
-// Helper method to get WebSocket manager (for resource handler)
-func (s *Server) GetWebSocketManager() *WebSocketManager {
-	return s.wsManager
 }
