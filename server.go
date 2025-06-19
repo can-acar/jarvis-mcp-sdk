@@ -24,6 +24,7 @@ type Server struct {
 	workerPool   *WorkerPool
 	concurrencyEnabled bool
 	streamingManager *StreamingManager
+	webTransport *WebTransport
 }
 
 // NewServer creates a new MCP server
