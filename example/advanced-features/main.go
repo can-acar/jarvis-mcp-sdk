@@ -10,21 +10,21 @@ import (
 	"strings"
 	"time"
 
-	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
+	jarvis "github.com/can-acar/jarvis-mcp-sdk"
 )
 
 // Typed tool parameter structs
 type FileProcessParams struct {
-	FilePath    string `json:"filePath" description:"Path to the file to process" required:"true"`
-	ProcessType string `json:"processType" description:"Type of processing" enum:"count,analyze,transform" required:"true"`
+	FilePath    string                 `json:"filePath" description:"Path to the file to process" required:"true"`
+	ProcessType string                 `json:"processType" description:"Type of processing" enum:"count,analyze,transform" required:"true"`
 	Options     map[string]interface{} `json:"options,omitempty" description:"Additional processing options"`
 }
 
 type BatchParams struct {
-	Directory string   `json:"directory" description:"Directory to process" required:"true"`
-	Pattern   string   `json:"pattern" description:"File pattern to match" required:"true"`
-	Operation string   `json:"operation" description:"Operation to perform" required:"true"`
-	Parallel  int      `json:"parallel" description:"Number of parallel workers" min:"1" max:"10"`
+	Directory string `json:"directory" description:"Directory to process" required:"true"`
+	Pattern   string `json:"pattern" description:"File pattern to match" required:"true"`
+	Operation string `json:"operation" description:"Operation to perform" required:"true"`
+	Parallel  int    `json:"parallel" description:"Number of parallel workers" min:"1" max:"10"`
 }
 
 func main() {
@@ -168,11 +168,11 @@ func getFileStats(ctx context.Context, params json.RawMessage) (interface{}, err
 	}
 
 	return map[string]interface{}{
-		"name":     info.Name(),
-		"size":     info.Size(),
-		"mode":     info.Mode().String(),
-		"modTime":  info.ModTime().Format(time.RFC3339),
-		"isDir":    info.IsDir(),
+		"name":    info.Name(),
+		"size":    info.Size(),
+		"mode":    info.Mode().String(),
+		"modTime": info.ModTime().Format(time.RFC3339),
+		"isDir":   info.IsDir(),
 	}, nil
 }
 
@@ -182,7 +182,7 @@ func serverMetricsResource(ctx context.Context, uri string) (interface{}, error)
 		"server_info": map[string]interface{}{
 			"name":    "advanced-file-processor",
 			"version": "2.0.0",
-			"uptime":  time.Since(time.Now().Add(-1*time.Hour)).String(),
+			"uptime":  time.Since(time.Now().Add(-1 * time.Hour)).String(),
 		},
 		"features": []string{
 			"typed-tools",
@@ -191,9 +191,9 @@ func serverMetricsResource(ctx context.Context, uri string) (interface{}, error)
 			"metrics",
 		},
 		"performance": map[string]interface{}{
-			"goroutines":      10,
-			"memory_mb":       25.6,
-			"cpu_percent":     12.3,
+			"goroutines":  10,
+			"memory_mb":   25.6,
+			"cpu_percent": 12.3,
 		},
 	}, nil
 }
@@ -233,10 +233,10 @@ func analyzeFile(filePath string) (interface{}, error) {
 	chars := len(content)
 
 	return map[string]interface{}{
-		"file":         filePath,
-		"size_bytes":   info.Size(),
-		"characters":   chars,
-		"words":        words,
+		"file":          filePath,
+		"size_bytes":    info.Size(),
+		"characters":    chars,
+		"words":         words,
 		"last_modified": info.ModTime().Format(time.RFC3339),
 	}, nil
 }

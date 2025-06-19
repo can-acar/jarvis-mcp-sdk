@@ -1,14 +1,14 @@
 package main
 
 import (
-	"context" 
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
-	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
+	jarvis "github.com/can-acar/jarvis-mcp-sdk"
 )
 
 func main() {
@@ -38,21 +38,21 @@ func listFilesTool(ctx context.Context, params json.RawMessage) (interface{}, er
 	var args struct {
 		Path string `json:"path"`
 	}
-	
+
 	if err := json.Unmarshal(params, &args); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	if args.Path == "" {
 		args.Path = "."
 	}
-	
+
 	var files []string
 	err := filepath.WalkDir(args.Path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if d.IsDir() {
 			files = append(files, fmt.Sprintf("[DIR] %s", path))
 		} else {
@@ -61,16 +61,16 @@ func listFilesTool(ctx context.Context, params json.RawMessage) (interface{}, er
 		}
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
-	
+
 	result := "Files in " + args.Path + ":\n"
 	for _, file := range files {
 		result += file + "\n"
 	}
-	
+
 	return result, nil
 }
 
@@ -78,16 +78,16 @@ func readFileTool(ctx context.Context, params json.RawMessage) (interface{}, err
 	var args struct {
 		Path string `json:"path"`
 	}
-	
+
 	if err := json.Unmarshal(params, &args); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	content, err := os.ReadFile(args.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
-	
+
 	return string(content), nil
 }
 
@@ -96,16 +96,16 @@ func writeFileTool(ctx context.Context, params json.RawMessage) (interface{}, er
 		Path    string `json:"path"`
 		Content string `json:"content"`
 	}
-	
+
 	if err := json.Unmarshal(params, &args); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	err := os.WriteFile(args.Path, []byte(args.Content), 0644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
-	
+
 	return fmt.Sprintf("Successfully wrote %d bytes to %s", len(args.Content), args.Path), nil
 }
 
@@ -113,16 +113,16 @@ func deleteFileTool(ctx context.Context, params json.RawMessage) (interface{}, e
 	var args struct {
 		Path string `json:"path"`
 	}
-	
+
 	if err := json.Unmarshal(params, &args); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	err := os.Remove(args.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete file: %w", err)
 	}
-	
+
 	return fmt.Sprintf("Successfully deleted %s", args.Path), nil
 }
 
@@ -141,12 +141,12 @@ func createTemplatePrompt(ctx context.Context, name string, arguments map[string
 	if !ok {
 		return nil, fmt.Errorf("template type is required")
 	}
-	
+
 	templateName, ok := arguments["name"].(string)
 	if !ok {
 		return nil, fmt.Errorf("template name is required")
 	}
-	
+
 	templates := map[string]string{
 		"go": `package main
 
@@ -174,12 +174,12 @@ if __name__ == "__main__":
 </body>
 </html>`,
 	}
-	
+
 	template, exists := templates[templateType]
 	if !exists {
 		return nil, fmt.Errorf("template type '%s' not supported", templateType)
 	}
-	
-	return fmt.Sprintf("Create a new %s file named '%s' with this template:\n\n%s", 
+
+	return fmt.Sprintf("Create a new %s file named '%s' with this template:\n\n%s",
 		templateType, templateName, template), nil
 }

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	mcp "github.com/jarvis-mcp/jarvis-mcp-sdk"
+	mcp "github.com/can-acar/jarvis-mcp-sdk"
 )
 
 func TestMiddlewareChain(t *testing.T) {
