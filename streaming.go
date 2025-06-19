@@ -285,7 +285,6 @@ func (sm *StreamingManager) PollSession(sessionID string, count int) (interface{
 				}, nil
 			}
 			// Return partial results
-
 			return map[string]interface{}{
 				"sessionId": sessionID,
 				"status":    "partial",
