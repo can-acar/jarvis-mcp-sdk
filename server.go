@@ -27,6 +27,7 @@ type Server struct {
 	webTransport *WebTransport
 	wsManager *WebSocketManager
 	sseManager *SSEManager
+	middlewareManager *MiddlewareManager
 }
 
 // NewServer creates a new MCP server
