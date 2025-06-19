@@ -20,6 +20,14 @@
 - 🛡️ **Middleware System**: Authentication, rate limiting, validation
 - 🎯 **Zero Dependencies**: Sadece Go standard library
 
+### 🌐 Web & Real-time Features
+
+- 🔗 **WebSocket Transport**: Bidirectional real-time communication
+- 📺 **Server-Sent Events (SSE)**: One-way streaming from server
+- 🌐 **HTTP REST API**: RESTful interface for all MCP operations
+- 🔐 **Web Authentication**: Bearer token security
+- 🎮 **Web Dashboard**: Browser-based management interface
+
 ## Kurulum
 
 ```bash
@@ -213,6 +221,65 @@ server.StreamingTool("batch_process", "Process large dataset", func(ctx context.
 // 3. stream/cancel ile iptal et
 ```
 
+### 🔗 WebSocket Real-time Communication
+
+```go
+// Enable WebSocket support
+server.EnableWebSocket(jarvis.DefaultWebSocketConfig())
+
+// Start with multi-transport (HTTP + WebSocket + stdio)
+server.RunMultiTransport()
+```
+
+**JavaScript WebSocket Client:**
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws?token=your-token');
+
+// Subscribe to streaming tool
+ws.send(JSON.stringify({
+  type: 'stream_subscribe',
+  id: 'stream-1',
+  params: {
+    toolName: 'batch_process',
+    arguments: { filePattern: '*.txt' }
+  }
+}));
+
+// Receive real-time updates
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === 'stream_data') {
+    updateProgressBar(msg.result.progress);
+  }
+};
+```
+
+### 📺 Server-Sent Events (SSE)
+
+```go
+// Enable SSE support
+server.EnableSSE(jarvis.DefaultSSEConfig())
+
+// Broadcast events to all SSE connections
+server.BroadcastSSEEvent(jarvis.SSEEvent{
+  Event: "notification",
+  Data: map[string]interface{}{
+    "message": "System maintenance starting",
+    "level": "warning",
+  },
+})
+```
+
+**JavaScript SSE Client:**
+```javascript
+const eventSource = new EventSource('http://localhost:8080/events?token=your-token');
+
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  showNotification(data);
+};
+```
+
 ### Custom Logger
 
 ```go
@@ -241,6 +308,10 @@ server.RunWithTransport(reader, writer)
 | Streaming | ❌ | Real-time Progress |
 | Schema Gen | Manual | Automatic (Reflection) |
 | Performance | Good | Excellent |
+| WebSocket | ❌ | Full Support |
+| SSE | ❌ | Built-in |
+| Web Dashboard | ❌ | Included |
+| Multi-Transport | ❌ | HTTP+WS+stdio |
 
 ## Lisans
 
