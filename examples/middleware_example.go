@@ -19,7 +19,7 @@ func main() {
 		Enabled: true,
 		Order: []string{
 			"logging",
-			"metrics", 
+			"metrics",
 			"request_id",
 			"auth",
 			"rate_limit",
@@ -46,9 +46,9 @@ func main() {
 	// Setup metrics middleware
 	metricsCollector := mcp.NewMemoryMetricsCollector()
 	metricsConfig := mcp.MetricsConfig{
-		IncludeUserMetrics:   true,
+		IncludeUserMetrics:    true,
 		IncludeDetailedTiming: true,
-		SampleRate:          1.0,
+		SampleRate:            1.0,
 	}
 	server.Use("metrics", mcp.MetricsMiddlewareWithConfig(metricsCollector, metricsConfig))
 
@@ -69,7 +69,7 @@ func main() {
 		RequestsPerWindow: 10,
 		WindowSize:        time.Minute,
 		BurstSize:         3,
-		KeyFunc:          mcp.UserBasedRateLimitKeyFunc,
+		KeyFunc:           mcp.UserBasedRateLimitKeyFunc,
 	}
 	server.Use("rate_limit", mcp.RateLimitMiddleware(rateLimitConfig))
 
@@ -141,7 +141,8 @@ func main() {
 		if params.ShouldFail {
 			return nil, &mcp.Error{
 				Code:    500,
-				Message: "Simulated failure",
+				Message: "Simulated failure for circuit breaker",
+				Data:    map[string]interface{}{"shouldFail": params.ShouldFail},
 			}
 		}
 
@@ -151,7 +152,7 @@ func main() {
 	})
 
 	// Register a resource for demonstration
-	server.Resource("file://demo.txt", "demo", "Demo resource", "text/plain", 
+	server.Resource("file://demo.txt", "demo", "Demo resource", "text/plain",
 		func(ctx context.Context, uri string) (interface{}, error) {
 			return "This is demo content", nil
 		})
@@ -172,7 +173,7 @@ func main() {
 	// Start server
 	log.Println("Starting MCP server with full middleware stack...")
 	log.Println("Middleware order:", middlewareConfig.Order)
-	
+
 	// Print example requests for testing
 	printExampleRequests()
 
@@ -183,7 +184,7 @@ func main() {
 
 func printExampleRequests() {
 	log.Println("\n=== Example Test Requests ===")
-	
+
 	// Example 1: Tool call with authentication
 	toolCallReq := map[string]interface{}{
 		"jsonrpc": "2.0",
@@ -198,7 +199,7 @@ func printExampleRequests() {
 			"_auth": "Bearer your-jwt-token-here",
 		},
 	}
-	
+
 	if reqBytes, err := json.MarshalIndent(toolCallReq, "", "  "); err == nil {
 		log.Printf("\n1. Authenticated Tool Call:\n%s\n", string(reqBytes))
 	}
@@ -213,7 +214,7 @@ func printExampleRequests() {
 			"_auth": "Bearer your-jwt-token-here",
 		},
 	}
-	
+
 	if reqBytes, err := json.MarshalIndent(resourceReq, "", "  "); err == nil {
 		log.Printf("2. Resource Read:\n%s\n", string(reqBytes))
 	}
@@ -231,7 +232,7 @@ func printExampleRequests() {
 			"_auth": "Bearer your-jwt-token-here",
 		},
 	}
-	
+
 	if reqBytes, err := json.MarshalIndent(promptReq, "", "  "); err == nil {
 		log.Printf("3. Prompt Execution:\n%s\n", string(reqBytes))
 	}
@@ -249,7 +250,7 @@ func printExampleRequests() {
 			"_auth": "Bearer your-jwt-token-here",
 		},
 	}
-	
+
 	if reqBytes, err := json.MarshalIndent(unreliableReq, "", "  "); err == nil {
 		log.Printf("4. Unreliable Tool (Circuit Breaker Test):\n%s\n", string(reqBytes))
 	}
