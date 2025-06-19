@@ -359,3 +359,36 @@ func (s *Server) GetWebSocketManager() *WebSocketManager {
 func (s *Server) GetSSEManager() *SSEManager {
 	return s.sseManager
 }
+
+// Getter methods for testing
+func (s *Server) GetName() string {
+	return s.name
+}
+
+func (s *Server) GetVersion() string {
+	return s.version
+}
+
+func (s *Server) GetTools() map[string]*Tool {
+	return s.tools
+}
+
+func (s *Server) GetToolHandlers() map[string]ToolHandler {
+	return s.toolHandlers
+}
+
+func (s *Server) GetResources() map[string]*Resource {
+	return s.resources
+}
+
+func (s *Server) GetResourceHandlers() map[string]ResourceHandler {
+	return s.resourceHandlers
+}
+
+func (s *Server) GetPrompts() map[string]*Prompt {
+	return s.prompts
+}
+
+func (s *Server) GetPromptHandlers() map[string]PromptHandler {
+	return s.promptHandlers
+}
