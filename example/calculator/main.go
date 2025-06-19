@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strconv"
 
-	mcp "github.com/mcp-sdk/go-mcp"
+	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func main() {
-	// Create a new MCP server
-	server := mcp.NewServer("calculator", "1.0.0")
+	// Create a new Jarvis MCP server
+	server := jarvis.NewServer("calculator", "1.0.0")
 
 	// Register tools with fluent API (similar to FastMCP decorators)
 	server.Tool("add", "Add two numbers", addTool).
@@ -22,7 +22,7 @@ func main() {
 	server.Resource("memory://calculations", "calculations", "Recent calculations", "text/plain", calculationsResource)
 
 	// Register a prompt
-	server.Prompt("math_problem", "Generate a math problem", []mcp.PromptArgument{
+	server.Prompt("math_problem", "Generate a math problem", []jarvis.PromptArgument{
 		{Name: "difficulty", Description: "Problem difficulty (easy, medium, hard)", Required: false},
 	}, mathProblemPrompt)
 

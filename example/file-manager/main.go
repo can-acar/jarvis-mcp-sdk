@@ -8,11 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
-	mcp "github.com/mcp-sdk/go-mcp"
+	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func main() {
-	server := mcp.NewServer("file-manager", "1.0.0")
+	server := jarvis.NewServer("file-manager", "1.0.0")
 
 	// File management tools
 	server.Tool("list_files", "List files in a directory", listFilesTool).
@@ -24,7 +24,7 @@ func main() {
 	server.Resource("file://", "filesystem", "Access to file system", "application/json", fileSystemResource)
 
 	// File templates prompt
-	server.Prompt("create_template", "Create a file template", []mcp.PromptArgument{
+	server.Prompt("create_template", "Create a file template", []jarvis.PromptArgument{
 		{Name: "type", Description: "Template type (go, python, html, etc.)", Required: true},
 		{Name: "name", Description: "Template name", Required: true},
 	}, createTemplatePrompt)

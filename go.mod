@@ -1,4 +1,4 @@
-module github.com/mcp-sdk/go-mcp
+module github.com/jarvis-mcp/jarvis-mcp-sdk
 
 go 1.21
 

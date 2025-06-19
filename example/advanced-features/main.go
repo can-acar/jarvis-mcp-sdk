@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	mcp "github.com/mcp-sdk/go-mcp"
+	jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 // Typed tool parameter structs
@@ -29,10 +29,10 @@ type BatchParams struct {
 
 func main() {
 	// Create server with advanced features
-	server := mcp.NewServer("advanced-file-processor", "2.0.0")
+	server := jarvis.NewServer("advanced-file-processor", "2.0.0")
 
 	// Enable concurrency with custom config
-	server.EnableConcurrency(mcp.ConcurrencyConfig{
+	server.EnableConcurrency(jarvis.ConcurrencyConfig{
 		MaxWorkers:     5,
 		QueueSize:      50,
 		RequestTimeout: 60 * time.Second,
@@ -73,14 +73,14 @@ func processFileTyped(ctx context.Context, params FileProcessParams) (interface{
 }
 
 // Streaming tool for batch processing
-func batchProcessStreaming(ctx context.Context, params json.RawMessage) (<-chan mcp.StreamingResult, error) {
+func batchProcessStreaming(ctx context.Context, params json.RawMessage) (<-chan jarvis.StreamingResult, error) {
 	var batchParams BatchParams
 	if err := json.Unmarshal(params, &batchParams); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
 
 	// Create result channel
-	resultChan := make(chan mcp.StreamingResult, 100)
+	resultChan := make(chan jarvis.StreamingResult, 100)
 
 	// Start processing in goroutine
 	go func() {
@@ -89,27 +89,27 @@ func batchProcessStreaming(ctx context.Context, params json.RawMessage) (<-chan 
 		// Find matching files
 		files, err := filepath.Glob(filepath.Join(batchParams.Directory, batchParams.Pattern))
 		if err != nil {
-			resultChan <- mcp.NewErrorResult(fmt.Errorf("failed to find files: %w", err))
+			resultChan <- jarvis.NewErrorResult(fmt.Errorf("failed to find files: %w", err))
 			return
 		}
 
 		total := len(files)
 		if total == 0 {
-			resultChan <- mcp.NewFinalResult("No files found matching pattern")
+			resultChan <- jarvis.NewFinalResult("No files found matching pattern")
 			return
 		}
 
 		// Send initial progress
-		resultChan <- mcp.StreamingResult{
+		resultChan <- jarvis.StreamingResult{
 			Data:     fmt.Sprintf("Found %d files to process", total),
-			Progress: mcp.NewProgress(0, int64(total), "Starting batch processing"),
+			Progress: jarvis.NewProgress(0, int64(total), "Starting batch processing"),
 		}
 
 		// Process files
 		for i, file := range files {
 			select {
 			case <-ctx.Done():
-				resultChan <- mcp.NewErrorResult(ctx.Err())
+				resultChan <- jarvis.NewErrorResult(ctx.Err())
 				return
 			default:
 			}
@@ -117,14 +117,14 @@ func batchProcessStreaming(ctx context.Context, params json.RawMessage) (<-chan 
 			// Process single file
 			result, err := processFile(file, batchParams.Operation)
 			if err != nil {
-				resultChan <- mcp.StreamingResult{
+				resultChan <- jarvis.StreamingResult{
 					Data:     fmt.Sprintf("Error processing %s: %v", file, err),
-					Progress: mcp.NewProgress(int64(i+1), int64(total), fmt.Sprintf("Processed %d/%d files", i+1, total)),
+					Progress: jarvis.NewProgress(int64(i+1), int64(total), fmt.Sprintf("Processed %d/%d files", i+1, total)),
 				}
 			} else {
-				resultChan <- mcp.StreamingResult{
+				resultChan <- jarvis.StreamingResult{
 					Data:     fmt.Sprintf("Processed %s: %s", file, result),
-					Progress: mcp.NewProgress(int64(i+1), int64(total), fmt.Sprintf("Processed %d/%d files", i+1, total)),
+					Progress: jarvis.NewProgress(int64(i+1), int64(total), fmt.Sprintf("Processed %d/%d files", i+1, total)),
 				}
 			}
 
@@ -133,7 +133,7 @@ func batchProcessStreaming(ctx context.Context, params json.RawMessage) (<-chan 
 		}
 
 		// Send final result
-		resultChan <- mcp.NewFinalResult(fmt.Sprintf("Batch processing completed. Processed %d files.", total))
+		resultChan <- jarvis.NewFinalResult(fmt.Sprintf("Batch processing completed. Processed %d files.", total))
 	}()
 
 	return resultChan, nil

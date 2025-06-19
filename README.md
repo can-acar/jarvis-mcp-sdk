@@ -1,6 +1,6 @@
-# Go MCP SDK
+# Jarvis MCP SDK
 
-FastMCP benzeri Go dili için MCP (Model Context Protocol) server SDK'sı.
+🤖 **Jarvis MCP SDK** - Go dili için gelişmiş MCP (Model Context Protocol) server framework'ü. FastMCP'nin ötesinde özellikler sunan, yüksek performanslı ve type-safe bir SDK.
 
 ## Özellikler
 
@@ -24,7 +24,7 @@ FastMCP benzeri Go dili için MCP (Model Context Protocol) server SDK'sı.
 
 ```bash
 go mod init your-mcp-server
-go get github.com/mcp-sdk/go-mcp
+go get github.com/jarvis-mcp/jarvis-mcp-sdk
 ```
 
 ## Hızlı Başlangıç
@@ -38,12 +38,12 @@ import (
     "context"
     "encoding/json"
     "fmt"
-    mcp "github.com/mcp-sdk/go-mcp"
+    jarvis "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func main() {
-    // MCP server oluştur
-    server := mcp.NewServer("calculator", "1.0.0")
+    // Jarvis MCP server oluştur
+    server := jarvis.NewServer("calculator", "1.0.0")
 
     // Tool'ları kaydet (FastMCP decorator benzeri)
     server.Tool("add", "Add two numbers", addTool).
@@ -171,7 +171,7 @@ server.RegisterTypedTool("process", "Process file", func(ctx context.Context, pa
 
 ```go
 // Goroutine pool ile concurrent processing
-server.EnableConcurrency(mcp.ConcurrencyConfig{
+server.EnableConcurrency(jarvis.ConcurrencyConfig{
     MaxWorkers:     10,
     QueueSize:      100,
     RequestTimeout: 30 * time.Second,
@@ -186,8 +186,8 @@ fmt.Printf("RPS: %.2f, Active: %d", metrics.RequestsPerSecond, metrics.ActiveReq
 ### 🌊 Streaming Tools
 
 ```go
-server.StreamingTool("batch_process", "Process large dataset", func(ctx context.Context, params json.RawMessage) (<-chan mcp.StreamingResult, error) {
-    resultChan := make(chan mcp.StreamingResult, 100)
+server.StreamingTool("batch_process", "Process large dataset", func(ctx context.Context, params json.RawMessage) (<-chan jarvis.StreamingResult, error) {
+    resultChan := make(chan jarvis.StreamingResult, 100)
     
     go func() {
         defer close(resultChan)
@@ -196,9 +196,9 @@ server.StreamingTool("batch_process", "Process large dataset", func(ctx context.
             // Uzun süren işlem
             result := processItem(i)
             
-            resultChan <- mcp.StreamingResult{
+            resultChan <- jarvis.StreamingResult{
                 Data:     result,
-                Progress: mcp.NewProgress(int64(i), 1000, "Processing..."),
+                Progress: jarvis.NewProgress(int64(i), 1000, "Processing..."),
                 Finished: i == 999,
             }
         }
@@ -227,9 +227,9 @@ server.SetLogger(logger)
 server.RunWithTransport(reader, writer)
 ```
 
-## Karşılaştırma: FastMCP vs Go MCP SDK
+## Karşılaştırma: FastMCP vs Jarvis MCP SDK
 
-| Özellik | FastMCP (Python) | Go MCP SDK |
+| Özellik | FastMCP (Python) | Jarvis MCP SDK |
 |---------|------------------|------------|
 | Decorator API | `@app.tool()` | `server.Tool()` |
 | Method Chaining | ❌ | ✅ |
@@ -237,6 +237,10 @@ server.RunWithTransport(reader, writer)
 | Performance | Good | Excellent |
 | Memory Usage | Higher | Lower |
 | Deployment | Python required | Single binary |
+| Concurrency | Limited (GIL) | Native Goroutines |
+| Streaming | ❌ | Real-time Progress |
+| Schema Gen | Manual | Automatic (Reflection) |
+| Performance | Good | Excellent |
 
 ## Lisans
 
