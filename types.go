@@ -7,12 +7,12 @@ import (
 
 // JSONSchema represents a JSON Schema definition
 type JSONSchema struct {
-	Type        string                 `json:"type,omitempty"`
-	Properties  map[string]JSONSchema  `json:"properties,omitempty"`
-	Required    []string               `json:"required,omitempty"`
-	Items       *JSONSchema            `json:"items,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Enum        []interface{}          `json:"enum,omitempty"`
+	Type        string                `json:"type,omitempty"`
+	Properties  map[string]JSONSchema `json:"properties,omitempty"`
+	Required    []string              `json:"required,omitempty"`
+	Items       *JSONSchema           `json:"items,omitempty"`
+	Description string                `json:"description,omitempty"`
+	Enum        []interface{}         `json:"enum,omitempty"`
 }
 
 // Tool represents an MCP tool definition
@@ -32,9 +32,9 @@ type Resource struct {
 
 // Prompt represents an MCP prompt definition
 type Prompt struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	Arguments   []PromptArgument       `json:"arguments,omitempty"`
+	Name        string           `json:"name"`
+	Description string           `json:"description,omitempty"`
+	Arguments   []PromptArgument `json:"arguments,omitempty"`
 }
 
 type PromptArgument struct {

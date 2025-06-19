@@ -11,23 +11,23 @@ import (
 
 // Server represents an MCP server
 type Server struct {
-	name         string
-	version      string
-	tools        map[string]*Tool
-	toolHandlers map[string]ToolHandler
-	resources    map[string]*Resource
-	resourceHandlers map[string]ResourceHandler
-	prompts      map[string]*Prompt
-	promptHandlers map[string]PromptHandler
-	capabilities ServerCapabilities
-	logger       *log.Logger
-	workerPool   *WorkerPool
+	name               string
+	version            string
+	tools              map[string]*Tool
+	toolHandlers       map[string]ToolHandler
+	resources          map[string]*Resource
+	resourceHandlers   map[string]ResourceHandler
+	prompts            map[string]*Prompt
+	promptHandlers     map[string]PromptHandler
+	capabilities       ServerCapabilities
+	logger             *log.Logger
+	workerPool         *WorkerPool
 	concurrencyEnabled bool
-	streamingManager *StreamingManager
-	webTransport *WebTransport
-	wsManager *WebSocketManager
-	sseManager *SSEManager
-	middlewareManager *MiddlewareManager
+	streamingManager   *StreamingManager
+	webTransport       *WebTransport
+	wsManager          *WebSocketManager
+	sseManager         *SSEManager
+	middlewareManager  *MiddlewareManager
 }
 
 // NewServer creates a new MCP server
@@ -54,13 +54,13 @@ func NewServer(name, version string) *Server {
 func (s *Server) Tool(name, description string, handler ToolHandler) *Server {
 	// Generate JSON schema from handler function
 	schema := s.generateSchemaFromHandler(handler)
-	
+
 	tool := &Tool{
 		Name:        name,
 		Description: description,
 		InputSchema: schema,
 	}
-	
+
 	s.tools[name] = tool
 	s.toolHandlers[name] = handler
 	return s
@@ -74,7 +74,7 @@ func (s *Server) Resource(uri, name, description, mimeType string, handler Resou
 		Description: description,
 		MimeType:    mimeType,
 	}
-	
+
 	s.resources[uri] = resource
 	s.resourceHandlers[uri] = handler
 	return s
@@ -87,7 +87,7 @@ func (s *Server) Prompt(name, description string, arguments []PromptArgument, ha
 		Description: description,
 		Arguments:   arguments,
 	}
-	
+
 	s.prompts[name] = prompt
 	s.promptHandlers[name] = handler
 	return s
@@ -114,7 +114,7 @@ func (s *Server) HandleRequest(ctx context.Context, req *Request) *Response {
 	if s.concurrencyEnabled && s.workerPool != nil {
 		return s.workerPool.SubmitRequest(req)
 	}
-	
+
 	// Process synchronously
 	return s.handleRequestSync(ctx, req)
 }
@@ -201,21 +201,21 @@ func (s *Server) handleToolsCall(ctx context.Context, params json.RawMessage) (i
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`
 	}
-	
+
 	if err := json.Unmarshal(params, &callParams); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	handler, exists := s.toolHandlers[callParams.Name]
 	if !exists {
 		return nil, fmt.Errorf("tool not found: %s", callParams.Name)
 	}
-	
+
 	result, err := handler(ctx, callParams.Arguments)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return map[string]interface{}{
 		"content": []map[string]interface{}{
 			{
@@ -240,21 +240,21 @@ func (s *Server) handleResourcesRead(ctx context.Context, params json.RawMessage
 	var readParams struct {
 		URI string `json:"uri"`
 	}
-	
+
 	if err := json.Unmarshal(params, &readParams); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	handler, exists := s.resourceHandlers[readParams.URI]
 	if !exists {
 		return nil, fmt.Errorf("resource not found: %s", readParams.URI)
 	}
-	
+
 	result, err := handler(ctx, readParams.URI)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{
@@ -281,21 +281,21 @@ func (s *Server) handlePromptsGet(ctx context.Context, params json.RawMessage) (
 		Name      string                 `json:"name"`
 		Arguments map[string]interface{} `json:"arguments"`
 	}
-	
+
 	if err := json.Unmarshal(params, &getParams); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %w", err)
 	}
-	
+
 	handler, exists := s.promptHandlers[getParams.Name]
 	if !exists {
 		return nil, fmt.Errorf("prompt not found: %s", getParams.Name)
 	}
-	
+
 	result, err := handler(ctx, getParams.Name, getParams.Arguments)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return map[string]interface{}{
 		"description": s.prompts[getParams.Name].Description,
 		"messages": []map[string]interface{}{
@@ -318,10 +318,10 @@ func (s *Server) Run() error {
 // RunWithTransport starts the server with custom transport
 func (s *Server) RunWithTransport(reader io.Reader, writer io.Writer) error {
 	s.logger.Printf("Starting MCP server: %s v%s", s.name, s.version)
-	
+
 	decoder := json.NewDecoder(reader)
 	encoder := json.NewEncoder(writer)
-	
+
 	for {
 		var req Request
 		if err := decoder.Decode(&req); err != nil {
@@ -331,16 +331,16 @@ func (s *Server) RunWithTransport(reader io.Reader, writer io.Writer) error {
 			s.logger.Printf("Error decoding request: %v", err)
 			continue
 		}
-		
+
 		ctx := context.Background()
 		response := s.HandleRequest(ctx, &req)
-		
+
 		if err := encoder.Encode(response); err != nil {
 			s.logger.Printf("Error encoding response: %v", err)
 			continue
 		}
 	}
-	
+
 	return nil
 }
 
@@ -391,4 +391,18 @@ func (s *Server) GetPrompts() map[string]*Prompt {
 
 func (s *Server) GetPromptHandlers() map[string]PromptHandler {
 	return s.promptHandlers
+}
+
+// NewError is public method to create a new MCP error
+// This is useful for creating consistent error responses in handlers
+func (s *Server) NewError(code int, message string, data any) Error {
+	return Error{
+		Code:    code,
+		Message: fmt.Sprintf("MCP Error: %s", message),
+		Data:    data,
+	}
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("Code: %d, Message: %s", e.Code, e.Message)
 }
