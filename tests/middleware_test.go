@@ -1,4 +1,4 @@
-package mcp
+package tests
 
 import (
 	"context"
@@ -7,13 +7,15 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	mcp "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func TestMiddlewareChain(t *testing.T) {
 	// Create server with middleware
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
-	config := MiddlewareConfig{
+	config := mcp.MiddlewareConfig{
 		Enabled: true,
 		Order:   []string{"logging", "metrics", "auth"},
 	}
@@ -21,16 +23,16 @@ func TestMiddlewareChain(t *testing.T) {
 	server.EnableMiddleware(config)
 	
 	// Add middleware
-	logger := NewBasicLogger(log.New(os.Stdout, "[TEST] ", log.LstdFlags))
-	server.Use("logging", LoggingMiddleware(logger))
+	logger := mcp.NewBasicLogger(log.New(os.Stdout, "[TEST] ", log.LstdFlags))
+	server.Use("logging", mcp.LoggingMiddleware(logger))
 	
-	collector := NewMemoryMetricsCollector()
-	server.Use("metrics", MetricsMiddleware(collector))
+	collector := mcp.NewMemoryMetricsCollector()
+	server.Use("metrics", mcp.MetricsMiddleware(collector))
 	
-	bearerConfig := BearerTokenConfig{
+	bearerConfig := mcp.BearerTokenConfig{
 		Tokens: []string{"test-token"},
 	}
-	server.Use("auth", BearerTokenMiddleware(bearerConfig))
+	server.Use("auth", mcp.BearerTokenMiddleware(bearerConfig))
 	
 	// Register test tool
 	server.Tool("test", "Test tool", func(ctx context.Context, args json.RawMessage) (interface{}, error) {
@@ -38,7 +40,7 @@ func TestMiddlewareChain(t *testing.T) {
 	})
 	
 	// Test request with valid token
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -62,11 +64,11 @@ func TestMiddlewareChain(t *testing.T) {
 }
 
 func TestValidationMiddleware(t *testing.T) {
-	config := ValidationConfig{
+	config := mcp.ValidationConfig{
 		Enabled:      true,
 		ValidateJSON: true,
 		MaxDepth:     3,
-		CustomRules: map[string]ValidationRule{
+		CustomRules: map[string]mcp.ValidationRule{
 			"arguments.value": {
 				Field:   "arguments.value",
 				Type:    "range",
@@ -76,10 +78,10 @@ func TestValidationMiddleware(t *testing.T) {
 		},
 	}
 	
-	validator := NewRequestValidator(config)
+	validator := mcp.NewRequestValidator(config)
 	
 	// Test valid request
-	validReq := &Request{
+	validReq := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -92,7 +94,7 @@ func TestValidationMiddleware(t *testing.T) {
 	}
 	
 	// Test invalid request (value out of range)
-	invalidReq := &Request{
+	invalidReq := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -110,16 +112,16 @@ func TestValidationMiddleware(t *testing.T) {
 }
 
 func TestRateLimitMiddleware(t *testing.T) {
-	config := RateLimitConfig{
+	config := mcp.RateLimitConfig{
 		RequestsPerWindow: 2,
 		WindowSize:        time.Minute,  // Longer window to avoid timing issues
 		BurstSize:         10,           // High burst to avoid burst limiting
-		KeyFunc:          func(ctx context.Context, req *Request) string { return "test-user" },
+		KeyFunc:          func(ctx context.Context, req *mcp.Request) string { return "test-user" },
 	}
 	
-	limiter := NewRateLimiter(config)
+	limiter := mcp.NewRateLimiter(config)
 	
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -156,7 +158,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 }
 
 func TestCircuitBreakerMiddleware(t *testing.T) {
-	config := CircuitBreakerConfig{
+	config := mcp.CircuitBreakerConfig{
 		FailureThreshold: 1,  // Simplified to 1 failure
 		SuccessThreshold: 1,
 		Timeout:          100 * time.Millisecond,
@@ -164,9 +166,9 @@ func TestCircuitBreakerMiddleware(t *testing.T) {
 		SlidingWindow:    time.Second,
 	}
 	
-	breaker := NewCircuitBreaker("test", config)
+	breaker := mcp.NewCircuitBreaker("test", config)
 	
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -175,11 +177,11 @@ func TestCircuitBreakerMiddleware(t *testing.T) {
 	ctx := context.Background()
 	
 	// Create a handler that fails
-	failingHandler := func(ctx context.Context, req *Request) *Response {
-		return &Response{
+	failingHandler := func(ctx context.Context, req *mcp.Request) *mcp.Response {
+		return &mcp.Response{
 			JSONRPC: "2.0",
 			ID:      req.ID,
-			Error: &Error{
+			Error: &mcp.Error{
 				Code:    500,
 				Message: "Internal server error",
 			},
@@ -193,7 +195,7 @@ func TestCircuitBreakerMiddleware(t *testing.T) {
 	}
 	
 	stats := breaker.GetStats()
-	if stats.State != StateOpen {
+	if stats.State != mcp.StateOpen {
 		t.Errorf("Expected circuit to be open after first failure, got %s", stats.State)
 	}
 	
@@ -208,35 +210,31 @@ func TestCircuitBreakerMiddleware(t *testing.T) {
 }
 
 func TestJWTMiddleware(t *testing.T) {
-	config := JWTConfig{
+	config := mcp.JWTConfig{
 		Secret:        "test-secret",
 		Algorithm:     "HS256",
 		SkipClaimsExp: true, // Skip expiry for testing
 	}
 	
-	// Create a simple JWT token for testing
-	// Header: {"alg":"HS256","typ":"JWT"}
-	// Payload: {"sub":"test-user","name":"Test User","roles":["user"]}
-	header := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-	payload := "eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwicm9sZXMiOlsidXNlciJdfQ"
-	signature := generateSignature(header+"."+payload, config.Secret, config.Algorithm)
-	token := header + "." + payload + "." + signature
+	// Use a pre-generated valid JWT token for testing
+	// This token contains: {"sub":"test-user","name":"Test User","roles":["user"],"exp":9999999999}
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwicm9sZXMiOlsidXNlciJdLCJleHAiOjk5OTk5OTk5OTl9.Kf_jiJKEF-TaVhEamzxBMX1b0dLEHkLpd1fZEec6Usk"
 	
 	// Test valid token
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
 		Params:  json.RawMessage(`{"_auth":"Bearer ` + token + `"}`),
 	}
 	
-	middleware := JWTMiddleware(config)
+	middleware := mcp.JWTMiddleware(config)
 	
 	// Create a simple next handler
-	nextHandler := func(ctx context.Context, req *Request) *Response {
+	nextHandler := func(ctx context.Context, req *mcp.Request) *mcp.Response {
 		// Check if user was set in context
-		if user := GetCurrentUser(ctx); user != nil {
-			return &Response{
+		if user := mcp.GetCurrentUser(ctx); user != nil {
+			return &mcp.Response{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  map[string]interface{}{"user": user.ID},
@@ -244,10 +242,10 @@ func TestJWTMiddleware(t *testing.T) {
 		}
 		
 		// Also check middleware context directly
-		mctx := GetMiddlewareContext(ctx)
+		mctx := mcp.GetMiddlewareContext(ctx)
 		if userInterface, exists := mctx.Get("user"); exists {
-			if user, ok := userInterface.(*User); ok {
-				return &Response{
+			if user, ok := userInterface.(*mcp.User); ok {
+				return &mcp.Response{
 					JSONRPC: "2.0",
 					ID:      req.ID,
 					Result:  map[string]interface{}{"user": user.ID},
@@ -255,10 +253,10 @@ func TestJWTMiddleware(t *testing.T) {
 			}
 		}
 		
-		return &Response{
+		return &mcp.Response{
 			JSONRPC: "2.0",
 			ID:      req.ID,
-			Error:   &Error{Code: 401, Message: "No user found"},
+			Error:   &mcp.Error{Code: 401, Message: "No user found"},
 		}
 	}
 	
@@ -266,7 +264,7 @@ func TestJWTMiddleware(t *testing.T) {
 	ctx := context.Background()
 	
 	// Create middleware context like the server would
-	mctx := NewMiddlewareContext()
+	mctx := mcp.NewMiddlewareContext()
 	ctx = context.WithValue(ctx, "middleware", mctx)
 	
 	response := handler(ctx, req)
@@ -285,7 +283,7 @@ func TestJWTMiddleware(t *testing.T) {
 }
 
 func TestMemoryMetricsCollector(t *testing.T) {
-	collector := NewMemoryMetricsCollector()
+	collector := mcp.NewMemoryMetricsCollector()
 	
 	// Test counter
 	labels := map[string]string{"method": "test"}
@@ -337,7 +335,7 @@ func TestMemoryMetricsCollector(t *testing.T) {
 }
 
 func TestMiddlewareContext(t *testing.T) {
-	mctx := NewMiddlewareContext()
+	mctx := mcp.NewMiddlewareContext()
 	
 	// Test basic set/get
 	mctx.Set("key1", "value1")
@@ -363,9 +361,9 @@ func TestMiddlewareContext(t *testing.T) {
 }
 
 func BenchmarkMiddlewareChain(b *testing.B) {
-	server := NewServer("bench", "1.0.0")
+	server := mcp.NewServer("bench", "1.0.0")
 	
-	config := MiddlewareConfig{
+	config := mcp.MiddlewareConfig{
 		Enabled: true,
 		Order:   []string{"logging", "metrics", "validation"},
 	}
@@ -373,20 +371,20 @@ func BenchmarkMiddlewareChain(b *testing.B) {
 	server.EnableMiddleware(config)
 	
 	// Add lightweight middleware
-	logger := NewBasicLogger(log.New(os.Stdout, "", 0))
-	server.Use("logging", LoggingMiddleware(logger))
+	logger := mcp.NewBasicLogger(log.New(os.Stdout, "", 0))
+	server.Use("logging", mcp.LoggingMiddleware(logger))
 	
-	collector := NewMemoryMetricsCollector()
-	server.Use("metrics", MetricsMiddleware(collector))
+	collector := mcp.NewMemoryMetricsCollector()
+	server.Use("metrics", mcp.MetricsMiddleware(collector))
 	
-	validationConfig := ValidationConfig{Enabled: true}
-	server.Use("validation", ValidationMiddleware(validationConfig))
+	validationConfig := mcp.ValidationConfig{Enabled: true}
+	server.Use("validation", mcp.ValidationMiddleware(validationConfig))
 	
 	server.Tool("bench", "Benchmark tool", func(ctx context.Context, args json.RawMessage) (interface{}, error) {
 		return "result", nil
 	})
 	
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",

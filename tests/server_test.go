@@ -1,4 +1,4 @@
-package mcp
+package tests
 
 import (
 	"context"
@@ -6,23 +6,25 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	mcp "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func TestNewServer(t *testing.T) {
-	server := NewServer("test-server", "1.0.0")
+	server := mcp.NewServer("test-server", "1.0.0")
 	
-	assert.Equal(t, "test-server", server.name)
-	assert.Equal(t, "1.0.0", server.version)
-	assert.NotNil(t, server.tools)
-	assert.NotNil(t, server.toolHandlers)
-	assert.NotNil(t, server.resources)
-	assert.NotNil(t, server.resourceHandlers)
-	assert.NotNil(t, server.prompts)
-	assert.NotNil(t, server.promptHandlers)
+	assert.Equal(t, "test-server", server.GetName())
+	assert.Equal(t, "1.0.0", server.GetVersion())
+	assert.NotNil(t, server.GetTools())
+	assert.NotNil(t, server.GetToolHandlers())
+	assert.NotNil(t, server.GetResources())
+	assert.NotNil(t, server.GetResourceHandlers())
+	assert.NotNil(t, server.GetPrompts())
+	assert.NotNil(t, server.GetPromptHandlers())
 }
 
 func TestServerTool(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		return "test result", nil
@@ -30,14 +32,14 @@ func TestServerTool(t *testing.T) {
 	
 	server.Tool("test_tool", "Test tool description", handler)
 	
-	assert.Contains(t, server.tools, "test_tool")
-	assert.Equal(t, "test_tool", server.tools["test_tool"].Name)
-	assert.Equal(t, "Test tool description", server.tools["test_tool"].Description)
-	assert.Contains(t, server.toolHandlers, "test_tool")
+	assert.Contains(t, server.GetTools(), "test_tool")
+	assert.Equal(t, "test_tool", server.GetTools()["test_tool"].Name)
+	assert.Equal(t, "Test tool description", server.GetTools()["test_tool"].Description)
+	assert.Contains(t, server.GetToolHandlers(), "test_tool")
 }
 
 func TestServerResource(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, uri string) (interface{}, error) {
 		return "resource content", nil
@@ -45,37 +47,37 @@ func TestServerResource(t *testing.T) {
 	
 	server.Resource("test://resource", "test_resource", "Test resource", "text/plain", handler)
 	
-	assert.Contains(t, server.resources, "test://resource")
-	assert.Equal(t, "test://resource", server.resources["test://resource"].URI)
-	assert.Equal(t, "test_resource", server.resources["test://resource"].Name)
-	assert.Equal(t, "Test resource", server.resources["test://resource"].Description)
-	assert.Equal(t, "text/plain", server.resources["test://resource"].MimeType)
+	assert.Contains(t, server.GetResources(), "test://resource")
+	assert.Equal(t, "test://resource", server.GetResources()["test://resource"].URI)
+	assert.Equal(t, "test_resource", server.GetResources()["test://resource"].Name)
+	assert.Equal(t, "Test resource", server.GetResources()["test://resource"].Description)
+	assert.Equal(t, "text/plain", server.GetResources()["test://resource"].MimeType)
 }
 
 func TestServerPrompt(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, name string, arguments map[string]interface{}) (interface{}, error) {
 		return "prompt result", nil
 	}
 	
-	args := []PromptArgument{
+	args := []mcp.PromptArgument{
 		{Name: "arg1", Description: "First argument", Required: true},
 	}
 	
 	server.Prompt("test_prompt", "Test prompt", args, handler)
 	
-	assert.Contains(t, server.prompts, "test_prompt")
-	assert.Equal(t, "test_prompt", server.prompts["test_prompt"].Name)
-	assert.Equal(t, "Test prompt", server.prompts["test_prompt"].Description)
-	assert.Len(t, server.prompts["test_prompt"].Arguments, 1)
+	assert.Contains(t, server.GetPrompts(), "test_prompt")
+	assert.Equal(t, "test_prompt", server.GetPrompts()["test_prompt"].Name)
+	assert.Equal(t, "Test prompt", server.GetPrompts()["test_prompt"].Description)
+	assert.Len(t, server.GetPrompts()["test_prompt"].Arguments, 1)
 }
 
 func TestHandleInitialize(t *testing.T) {
-	server := NewServer("test-server", "1.0.0")
+	server := mcp.NewServer("test-server", "1.0.0")
 	ctx := context.Background()
 	
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "initialize",
@@ -100,7 +102,7 @@ func TestHandleInitialize(t *testing.T) {
 }
 
 func TestHandleToolsList(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		return "result", nil
@@ -110,7 +112,7 @@ func TestHandleToolsList(t *testing.T) {
 	server.Tool("tool2", "Second tool", handler)
 	
 	ctx := context.Background()
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/list",
@@ -123,13 +125,13 @@ func TestHandleToolsList(t *testing.T) {
 	result, ok := response.Result.(map[string]interface{})
 	require.True(t, ok)
 	
-	tools, ok := result["tools"].([]*Tool)
+	tools, ok := result["tools"].([]*mcp.Tool)
 	require.True(t, ok)
 	assert.Len(t, tools, 2)
 }
 
 func TestHandleToolsCall(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		var args struct {
@@ -142,7 +144,7 @@ func TestHandleToolsCall(t *testing.T) {
 	server.Tool("greet", "Greeting tool", handler)
 	
 	ctx := context.Background()
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "tools/call",
@@ -165,10 +167,10 @@ func TestHandleToolsCall(t *testing.T) {
 }
 
 func TestMethodNotFound(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	ctx := context.Background()
 	
-	req := &Request{
+	req := &mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "unknown/method",
@@ -182,7 +184,7 @@ func TestMethodNotFound(t *testing.T) {
 }
 
 func TestFluentAPI(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		return "result", nil
@@ -204,13 +206,13 @@ func TestFluentAPI(t *testing.T) {
 		Prompt("prompt1", "Prompt 1", nil, promptHandler)
 	
 	assert.Same(t, server, result)
-	assert.Len(t, server.tools, 2)
-	assert.Len(t, server.resources, 1)
-	assert.Len(t, server.prompts, 1)
+	assert.Len(t, server.GetTools(), 2)
+	assert.Len(t, server.GetResources(), 1)
+	assert.Len(t, server.GetPrompts(), 1)
 }
 
 func TestRunWithTransport(t *testing.T) {
-	server := NewServer("test", "1.0.0")
+	server := mcp.NewServer("test", "1.0.0")
 	
 	handler := func(ctx context.Context, params json.RawMessage) (interface{}, error) {
 		return "test result", nil
@@ -219,7 +221,7 @@ func TestRunWithTransport(t *testing.T) {
 	server.Tool("test", "Test tool", handler)
 	
 	// Prepare input
-	initRequest := Request{
+	initRequest := mcp.Request{
 		JSONRPC: "2.0",
 		ID:      1,
 		Method:  "initialize",

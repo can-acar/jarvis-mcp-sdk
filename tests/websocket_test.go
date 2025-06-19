@@ -1,4 +1,4 @@
-package mcp
+package tests
 
 import (
 	"context"
@@ -12,11 +12,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	mcp "github.com/jarvis-mcp/jarvis-mcp-sdk"
 )
 
 func TestWebSocketBasic(t *testing.T) {
 	// Create server with WebSocket support
-	server := NewServer("websocket-test", "1.0.0")
+	server := mcp.NewServer("websocket-test", "1.0.0")
 
 	// Add a test tool
 	server.Tool("echo", "Echo back input", func(ctx context.Context, params json.RawMessage) (interface{}, error) {
@@ -32,7 +34,7 @@ func TestWebSocketBasic(t *testing.T) {
 	})
 
 	// Enable web transport
-	webConfig := WebConfig{
+	webConfig := mcp.WebConfig{
 		Port:      8091,
 		Host:      "localhost",
 		AuthToken: "ws-test-token",
@@ -40,7 +42,7 @@ func TestWebSocketBasic(t *testing.T) {
 	server.EnableWebTransport(webConfig)
 
 	// Enable WebSocket
-	wsConfig := DefaultWebSocketConfig()
+	wsConfig := mcp.DefaultWebSocketConfig()
 	server.EnableWebSocket(wsConfig)
 
 	// Start server
@@ -74,7 +76,7 @@ func TestWebSocketBasic(t *testing.T) {
 		_, msgBytes, err := c.ReadMessage()
 		require.NoError(t, err)
 
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = json.Unmarshal(msgBytes, &response)
 		require.NoError(t, err)
 
@@ -90,7 +92,7 @@ func TestWebSocketBasic(t *testing.T) {
 		defer c.Close()
 
 		// Send tool call request
-		request := WebSocketMessage{
+		request := mcp.WebSocketMessage{
 			Type:   "request",
 			ID:     "req-1",
 			Method: "tools/call",
@@ -102,7 +104,7 @@ func TestWebSocketBasic(t *testing.T) {
 		require.NoError(t, err)
 
 		// Read response
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = c.ReadJSON(&response)
 		require.NoError(t, err)
 
@@ -114,15 +116,15 @@ func TestWebSocketBasic(t *testing.T) {
 }
 
 func TestWebSocketAuthentication(t *testing.T) {
-	server := NewServer("websocket-auth-test", "1.0.0")
+	server := mcp.NewServer("websocket-auth-test", "1.0.0")
 
-	webConfig := WebConfig{
+	webConfig := mcp.WebConfig{
 		Port:      8092,
 		Host:      "localhost",
 		AuthToken: "secret-token",
 	}
 	server.EnableWebTransport(webConfig)
-	server.EnableWebSocket(DefaultWebSocketConfig())
+	server.EnableWebSocket(mcp.DefaultWebSocketConfig())
 
 	err := server.StartWebTransport()
 	require.NoError(t, err)
@@ -153,13 +155,13 @@ func TestWebSocketAuthentication(t *testing.T) {
 		defer c.Close()
 
 		// Should be able to send ping
-		err = c.WriteJSON(WebSocketMessage{
+		err = c.WriteJSON(mcp.WebSocketMessage{
 			Type: "ping",
 			ID:   "auth-ping",
 		})
 		require.NoError(t, err)
 
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = c.ReadJSON(&response)
 		require.NoError(t, err)
 		assert.Equal(t, "pong", response.Type)
@@ -176,13 +178,13 @@ func TestWebSocketAuthentication(t *testing.T) {
 		defer c.Close()
 
 		// Should be able to send ping
-		err = c.WriteJSON(WebSocketMessage{
+		err = c.WriteJSON(mcp.WebSocketMessage{
 			Type: "ping",
 			ID:   "header-auth-ping",
 		})
 		require.NoError(t, err)
 
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = c.ReadJSON(&response)
 		require.NoError(t, err)
 		assert.Equal(t, "pong", response.Type)
@@ -190,11 +192,11 @@ func TestWebSocketAuthentication(t *testing.T) {
 }
 
 func TestWebSocketStreaming(t *testing.T) {
-	server := NewServer("websocket-streaming-test", "1.0.0")
+	server := mcp.NewServer("websocket-streaming-test", "1.0.0")
 
 	// Add a streaming tool
-	server.StreamingTool("batch_process", "Batch processing with progress", func(ctx context.Context, params json.RawMessage) (<-chan StreamingResult, error) {
-		resultChan := make(chan StreamingResult, 10)
+	server.StreamingTool("batch_process", "Batch processing with progress", func(ctx context.Context, params json.RawMessage) (<-chan mcp.StreamingResult, error) {
+		resultChan := make(chan mcp.StreamingResult, 10)
 
 		go func() {
 			defer close(resultChan)
@@ -206,9 +208,9 @@ func TestWebSocketStreaming(t *testing.T) {
 				default:
 				}
 
-				resultChan <- StreamingResult{
+				resultChan <- mcp.StreamingResult{
 					Data:     fmt.Sprintf("Processing item %d", i+1),
-					Progress: NewProgress(int64(i+1), 5, fmt.Sprintf("Step %d/5", i+1)),
+					Progress: mcp.NewProgress(int64(i+1), 5, fmt.Sprintf("Step %d/5", i+1)),
 					Finished: i == 4,
 				}
 
@@ -219,12 +221,12 @@ func TestWebSocketStreaming(t *testing.T) {
 		return resultChan, nil
 	})
 
-	webConfig := WebConfig{
+	webConfig := mcp.WebConfig{
 		Port: 8093,
 		Host: "localhost",
 	}
 	server.EnableWebTransport(webConfig)
-	server.EnableWebSocket(DefaultWebSocketConfig())
+	server.EnableWebSocket(mcp.DefaultWebSocketConfig())
 
 	err := server.StartWebTransport()
 	require.NoError(t, err)
@@ -243,7 +245,7 @@ func TestWebSocketStreaming(t *testing.T) {
 		defer c.Close()
 
 		// Subscribe to streaming tool
-		subscribeMsg := WebSocketMessage{
+		subscribeMsg := mcp.WebSocketMessage{
 			Type:   "stream_subscribe",
 			ID:     "sub-1",
 			Params: json.RawMessage(`{"toolName": "batch_process", "arguments": {}}`),
@@ -253,7 +255,7 @@ func TestWebSocketStreaming(t *testing.T) {
 		require.NoError(t, err)
 
 		// Read subscription response
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = c.ReadJSON(&response)
 		require.NoError(t, err)
 
@@ -268,7 +270,7 @@ func TestWebSocketStreaming(t *testing.T) {
 		streamUpdates := 0
 		for streamUpdates < 3 { // Read a few updates
 			c.SetReadDeadline(time.Now().Add(2 * time.Second))
-			var streamMsg WebSocketMessage
+			var streamMsg mcp.WebSocketMessage
 			err = c.ReadJSON(&streamMsg)
 			if err != nil {
 				break
@@ -285,14 +287,14 @@ func TestWebSocketStreaming(t *testing.T) {
 }
 
 func TestWebSocketErrorHandling(t *testing.T) {
-	server := NewServer("websocket-error-test", "1.0.0")
+	server := mcp.NewServer("websocket-error-test", "1.0.0")
 
-	webConfig := WebConfig{
+	webConfig := mcp.WebConfig{
 		Port: 8094,
 		Host: "localhost",
 	}
 	server.EnableWebTransport(webConfig)
-	server.EnableWebSocket(DefaultWebSocketConfig())
+	server.EnableWebSocket(mcp.DefaultWebSocketConfig())
 
 	err := server.StartWebTransport()
 	require.NoError(t, err)
@@ -311,7 +313,7 @@ func TestWebSocketErrorHandling(t *testing.T) {
 		defer c.Close()
 
 		// Send unknown message type
-		unknownMsg := WebSocketMessage{
+		unknownMsg := mcp.WebSocketMessage{
 			Type: "unknown_type",
 			ID:   "unknown-1",
 		}
@@ -320,7 +322,7 @@ func TestWebSocketErrorHandling(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should receive error response
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = c.ReadJSON(&response)
 		require.NoError(t, err)
 
@@ -337,7 +339,7 @@ func TestWebSocketErrorHandling(t *testing.T) {
 		defer c.Close()
 
 		// Send request without method
-		requestMsg := WebSocketMessage{
+		requestMsg := mcp.WebSocketMessage{
 			Type: "request",
 			ID:   "no-method-1",
 		}
@@ -346,7 +348,7 @@ func TestWebSocketErrorHandling(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should receive error response
-		var response WebSocketMessage
+		var response mcp.WebSocketMessage
 		err = c.ReadJSON(&response)
 		require.NoError(t, err)
 
@@ -358,16 +360,16 @@ func TestWebSocketErrorHandling(t *testing.T) {
 }
 
 func TestSSEBasic(t *testing.T) {
-	server := NewServer("sse-test", "1.0.0")
+	server := mcp.NewServer("sse-test", "1.0.0")
 
-	webConfig := WebConfig{
+	webConfig := mcp.WebConfig{
 		Port:      8095,
 		Host:      "localhost",
 		AuthToken: "sse-token",
 	}
 	server.EnableWebTransport(webConfig)
 	
-	sseConfig := DefaultSSEConfig()
+	sseConfig := mcp.DefaultSSEConfig()
 	sseConfig.HeartbeatInterval = 1 * time.Second // Faster heartbeat for testing
 	server.EnableSSE(sseConfig)
 
@@ -423,14 +425,14 @@ func TestSSEBasic(t *testing.T) {
 }
 
 func TestSSEBroadcast(t *testing.T) {
-	server := NewServer("sse-broadcast-test", "1.0.0")
+	server := mcp.NewServer("sse-broadcast-test", "1.0.0")
 
-	webConfig := WebConfig{
+	webConfig := mcp.WebConfig{
 		Port: 8096,
 		Host: "localhost",
 	}
 	server.EnableWebTransport(webConfig)
-	server.EnableSSE(DefaultSSEConfig())
+	server.EnableSSE(mcp.DefaultSSEConfig())
 
 	err := server.StartWebTransport()
 	require.NoError(t, err)
@@ -447,7 +449,7 @@ func TestSSEBroadcast(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// Broadcast an event
-		server.BroadcastSSEEvent(SSEEvent{
+		server.BroadcastSSEEvent(mcp.SSEEvent{
 			ID:    "broadcast-1",
 			Event: "test",
 			Data: map[string]interface{}{
@@ -457,6 +459,6 @@ func TestSSEBroadcast(t *testing.T) {
 
 		// Since we don't have active connections in this test,
 		// we just verify the method doesn't crash
-		assert.NotNil(t, server.sseManager)
+		assert.NotNil(t, server.GetSSEManager())
 	})
 }
