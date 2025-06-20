@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -76,6 +78,18 @@ func NewSSEManager(server *Server, config SSEConfig) *SSEManager {
 
 // HandleSSE handles SSE requests
 func (sm *SSEManager) HandleSSE(w http.ResponseWriter, r *http.Request) {
+	// Handle POST requests as MCP protocol messages (VSCode compatibility)
+	if r.Method == http.MethodPost {
+		sm.handleMCPMessage(w, r)
+		return
+	}
+
+	// Handle GET requests as SSE connections
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Check if we've reached max connections
 	sm.mu.RLock()
 	connCount := len(sm.connections)
@@ -132,15 +146,15 @@ func (sm *SSEManager) HandleSSE(w http.ResponseWriter, r *http.Request) {
 
 	sm.logger.Printf("SSE connection established: %s", conn.id)
 
-	// Send initial connection event
+	// Send initial endpoint event with sessionId (GitHub example format)
+	sessionId := fmt.Sprintf("%s-%s-%s-%s-%s", 
+		generateRandomString(8), generateRandomString(4), 
+		generateRandomString(4), generateRandomString(4), 
+		generateRandomString(12))
+	
 	conn.sendEvent(SSEEvent{
-		ID:    "connect",
-		Event: "connection",
-		Data: map[string]interface{}{
-			"connected":   true,
-			"connectionId": conn.id,
-			"timestamp":   time.Now().Unix(),
-		},
+		Event: "endpoint",
+		Data:  fmt.Sprintf("/messages?sessionId=%s", sessionId),
 	})
 
 	// Handle connection
@@ -356,4 +370,58 @@ func (s *Server) SendSSEEventToConnection(connectionID string, event SSEEvent) b
 		return s.sseManager.SendEventToConnection(connectionID, event)
 	}
 	return false
+}
+
+// handleMCPMessage handles MCP protocol messages sent to SSE endpoint (VSCode compatibility)
+func (sm *SSEManager) handleMCPMessage(w http.ResponseWriter, r *http.Request) {
+	// Check authentication if required
+	if sm.server.webTransport != nil && sm.server.webTransport.config.AuthToken != "" {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+
+		// Validate Bearer token
+		expectedAuth := fmt.Sprintf("Bearer %s", sm.server.webTransport.config.AuthToken)
+		if authHeader != expectedAuth {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	// Parse request body as MCP request
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	var mcpRequest Request
+	if err := json.Unmarshal(body, &mcpRequest); err != nil {
+		http.Error(w, "Invalid MCP request format", http.StatusBadRequest)
+		return
+	}
+
+	// Process via MCP server
+	ctx := context.Background()
+	response := sm.server.HandleRequest(ctx, &mcpRequest)
+
+	// Return MCP response directly
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		sm.logger.Printf("Failed to encode MCP response: %v", err)
+	}
+}
+
+// generateRandomString generates a random string of given length
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
 }

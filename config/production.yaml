@@ -1,0 +1,199 @@
+# Production MCP Server Configuration
+# This configuration demonstrates enterprise-grade settings for production deployment
+
+server:
+  name: "production-mcp-server"
+  version: "1.0.0"
+  description: "Enterprise MCP Server with full middleware stack"
+  concurrencyEnabled: true
+  workerPoolSize: 20
+  gracefulTimeout: 30s
+  maxConnections: 1000
+  readTimeout: 30s
+  writeTimeout: 30s
+  idleTimeout: 120s
+
+# Web Transport Configuration
+web:
+  enabled: true
+  port: 8080
+  host: "0.0.0.0"
+  authToken: "${API_TOKEN}" # Use environment variable
+  enableCORS: true
+  enableDashboard: true
+  requestTimeout: 30s
+  maxRequestSize: "10MB"
+  tls:
+    enabled: true
+    certFile: "/etc/ssl/certs/server.crt"
+    keyFile: "/etc/ssl/private/server.key"
+    minVersion: "1.2"
+  rateLimit:
+    requestsPerSecond: 100
+    burstSize: 200
+
+# WebSocket Configuration
+websocket:
+  enabled: true
+  maxConnections: 1000
+  messageBufferSize: 1000
+  heartbeatInterval: 30s
+  readDeadline: 60s
+  writeDeadline: 10s
+  maxMessageSize: "1MB"
+  compression: true
+
+# Server-Sent Events Configuration
+sse:
+  enabled: true
+  maxConnections: 500
+  bufferSize: 1000
+  heartbeatInterval: 30s
+  enableCORS: true
+
+# Middleware Configuration
+middleware:
+  enabled: true
+  order:
+    - "tracing"
+    - "logging"
+    - "metrics"
+    - "auth"
+    - "rate_limit"
+    - "validation"
+    - "circuit_breaker"
+  skipMethods:
+    - "health"
+    - "initialize"
+
+# Authentication Configuration
+auth:
+  jwt:
+    secret: "${JWT_SECRET}"
+    algorithm: "HS256"
+    issuer: "mcp-production"
+    audience: "mcp-api"
+    expirationTime: "24h"
+    requiredClaims:
+      - "sub"
+      - "iat"
+      - "exp"
+    rolesClaim: "roles"
+    skipClaimsExp: false
+  
+  bearerToken:
+    tokens:
+      - "${API_TOKEN}"
+    
+  apiKey:
+    keys:
+      - name: "service-key-1"
+        key: "${SERVICE_KEY_1}"
+        permissions:
+          - "read"
+          - "write"
+      - name: "readonly-key"
+        key: "${READONLY_KEY}"
+        permissions:
+          - "read"
+
+# Rate Limiting Configuration
+rateLimit:
+  requestsPerWindow: 1000
+  windowSize: "1h"
+  burstSize: 50
+  keyFunc: "user_based"
+  perToolLimits:
+    heavy_computation:
+      requestsPerWindow: 10
+      windowSize: "1m"
+      burstSize: 2
+    data_export:
+      requestsPerWindow: 5
+      windowSize: "1h"
+      burstSize: 1
+  adaptive:
+    enabled: true
+    targetLatency: "100ms"
+    adjustmentInterval: "30s"
+
+# Request Validation Configuration
+validation:
+  enabled: true
+  validateJSON: true
+  strictMode: true
+  maxDepth: 5
+  customRules:
+    "arguments.amount":
+      field: "arguments.amount"
+      type: "range"
+      value:
+        min: 0.01
+        max: 1000000.00
+      message: "Amount must be between 0.01 and 1,000,000"
+    "arguments.email":
+      field: "arguments.email"
+      type: "pattern"
+      value: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+      message: "Invalid email format"
+
+# Circuit Breaker Configuration
+circuitBreaker:
+  failureThreshold: 5
+  successThreshold: 3
+  timeout: "60s"
+  maxRequests: 100
+  slidingWindow: "5m"
+
+# Prometheus Metrics Configuration
+prometheus:
+  enabled: true
+  namespace: "mcp"
+  subsystem: "production"
+  path: "/metrics"
+  customLabels:
+    environment: "production"
+    datacenter: "us-east-1"
+  histogramBuckets:
+    - 0.001
+    - 0.01
+    - 0.1
+    - 1.0
+    - 10.0
+  enableGoMetrics: true
+  enableProcessMetrics: true
+
+# OpenTelemetry Tracing Configuration
+tracing:
+  enabled: true
+  serviceName: "production-mcp-server"
+  serviceVersion: "1.0.0"
+  environment: "production"
+  exporter: "jaeger"
+  samplingRatio: 0.1  # Sample 10% of traces in production
+  attributes:
+    datacenter: "us-east-1"
+    cluster: "production"
+  jaegerEndpoint: "http://jaeger:14268/api/traces"
+  otlpEndpoint: "http://otel-collector:4318/v1/traces"
+  otlpHeaders:
+    "x-api-key": "${OTEL_API_KEY}"
+  traceMiddleware: true
+  traceTools: true
+  traceConnections: true
+  traceDatabase: true
+
+# Logging Configuration
+logging:
+  level: "info"
+  format: "json"
+  output: "stderr"
+  file: "/var/log/mcp-server/server.log"
+  maxSize: 100      # MB
+  maxBackups: 3
+  maxAge: 28        # days
+  compress: true
+  fields:
+    service: "mcp-server"
+    version: "1.0.0"
+    environment: "production"

@@ -1,6 +1,6 @@
 # 🌊 Jarvis MCP Streaming Server Example
 
-Bu örnek, Jarvis MCP SDK'nın gelişmiş streaming özelliklerini demonstre eder - WebSocket, Server-Sent Events (SSE) ve real-time streaming tools.
+Bu örnek, Jarvis MCP GO SDK'nın gelişmiş streaming özelliklerini demonstre eder - WebSocket, Server-Sent Events (SSE) ve real-time streaming tools.
 
 ## 🚀 Özellikler
 
@@ -32,7 +32,7 @@ Server başladığında:
 🌊 Starting Jarvis MCP Streaming Server...
 📡 Web Dashboard: http://localhost:8080/dashboard
 🔗 WebSocket Endpoint: ws://localhost:8080/ws
-📺 SSE Endpoint: http://localhost:8080/events
+📺 SSE Endpoint: http://localhost:8080/events | sse
 🔐 Auth Token: streaming-demo-token-2024
 ```
 

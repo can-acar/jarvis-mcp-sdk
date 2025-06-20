@@ -1,0 +1,16 @@
+{
+    "inputs": [],
+    "servers": {
+        "my-mcp-server-8202c24c": {
+            "type": "sse",
+            "url": "http://localhost:8001/sse",
+            "env": {},
+            "headers": {
+                //no cache
+                "Cache-Control": "no-cache",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        }
+    }
+}
