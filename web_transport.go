@@ -93,6 +93,11 @@ func (wt *WebTransport) registerRoutes() {
 	// Server info endpoint
 	wt.mux.HandleFunc("/api/v1/server/info", wt.withMiddleware(wt.handleServerInfo))
 	
+	// MCP-over-HTTP endpoints for SSE transport (FastMCP compatible)
+	wt.mux.HandleFunc("/message", wt.withMiddleware(wt.handleMCPMessage))   // Legacy
+	wt.mux.HandleFunc("/messages", wt.withMiddleware(wt.handleMCPMessage))  // FastMCP standard
+	wt.mux.HandleFunc("/messages/", wt.withMiddleware(wt.handleMCPMessage)) // FastMCP with trailing slash
+	
 	// Dashboard (if enabled)
 	if wt.config.EnableDashboard {
 		wt.mux.HandleFunc("/", wt.handleDashboard)
@@ -238,6 +243,11 @@ func (wt *WebTransport) GetAddr() string {
 	return wt.httpServer.Addr
 }
 
+// GetMux returns the HTTP mux for custom route registration
+func (wt *WebTransport) GetMux() *http.ServeMux {
+	return wt.mux
+}
+
 // writeJSON writes a JSON response
 func (wt *WebTransport) writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -300,6 +310,11 @@ func (s *Server) StopWebTransport() error {
 		return nil
 	}
 	return s.webTransport.Stop()
+}
+
+// GetWebTransport returns the web transport instance
+func (s *Server) GetWebTransport() *WebTransport {
+	return s.webTransport
 }
 
 // RunWithWebTransport runs the server with web transport only

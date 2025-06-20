@@ -528,6 +528,39 @@ func (wt *WebTransport) generateRequestID() string {
 	return fmt.Sprintf("web_%d", wt.server.getCurrentTimestamp())
 }
 
+// handleMCPMessage handles raw MCP protocol messages for SSE transport
+func (wt *WebTransport) handleMCPMessage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		wt.writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Parse request body as MCP request
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		wt.writeError(w, http.StatusBadRequest, "Failed to read request body")
+		return
+	}
+
+	var mcpRequest Request
+	if err := json.Unmarshal(body, &mcpRequest); err != nil {
+		wt.writeError(w, http.StatusBadRequest, "Invalid MCP request format")
+		return
+	}
+
+	// Process via MCP server
+	ctx := context.Background()
+	response := wt.server.HandleRequest(ctx, &mcpRequest)
+
+	// Return MCP response directly (not wrapped in APIResponse)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		wt.logger.Printf("Failed to encode MCP response: %v", err)
+	}
+}
+
 // Helper method for server to get current timestamp  
 func (s *Server) getCurrentTimestamp() int64 {
 	// Simple incrementing counter for request IDs
